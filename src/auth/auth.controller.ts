@@ -1,9 +1,4 @@
-import {
-  ApiBearerAuth,
-  ApiBody,
-  ApiCookieAuth,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
 import { Body, Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { Request, Response } from 'express';
 
@@ -31,7 +26,6 @@ export class AuthController {
     return this.authService.signIn(req.user, res);
   }
 
-  @ApiCookieAuth()
   @UseGuards(RefreshTokenGuard)
   @Post('refresh')
   async refresh(@Req() req: Request, @Res() res: Response) {

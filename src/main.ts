@@ -20,7 +20,6 @@ async function bootstrap() {
     .addTag('users', 'User related endpoints')
     .addTag('auth', 'Authentication related endpoints')
     .addBearerAuth()
-    .addCookieAuth('refreshToken')
     .build();
 
   const options: SwaggerDocumentOptions = {
