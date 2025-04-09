@@ -1,3 +1,4 @@
+import * as bcrypt from 'bcryptjs';
 import { Prisma } from '@prisma/client';
 import {
   Injectable,
@@ -16,8 +17,10 @@ export class UsersService {
 
   async create(createUserDto: CreateUserDto) {
     try {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(createUserDto.password, salt);
       const user = await this.prismaService.user.create({
-        data: createUserDto,
+        data: { ...createUserDto, password: hashedPassword },
       });
 
       return user;
@@ -55,7 +58,10 @@ export class UsersService {
         throw new NotFoundException(`User with ID ${id} not found.`);
       }
 
-      return user;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password, ...userWithoutPassword } = user;
+
+      return userWithoutPassword;
     } catch (error) {
       console.error(`Failed to fetch user with ID ${id}:`, error);
 
@@ -67,14 +73,46 @@ export class UsersService {
     }
   }
 
+  async findByEmail(email: string) {
+    try {
+      const user = await this.prismaService.user.findUnique({
+        where: { email },
+      });
+
+      if (!user) {
+        throw new NotFoundException(`User with email ${email} not found.`);
+      }
+
+      return user;
+    } catch (error) {
+      console.error(`Failed to fetch user with email ${email}:`, error);
+
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException('Failed to fetch user.');
+    }
+  }
+
   async update(id: string, updateUserDto: UpdateUserDto) {
     try {
+      if (updateUserDto.password) {
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(updateUserDto.password, salt);
+
+        updateUserDto.password = hashedPassword;
+      }
+
       const user = await this.prismaService.user.update({
         where: { id },
         data: updateUserDto,
       });
 
-      return user;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password, ...userWithoutPassword } = user;
+
+      return userWithoutPassword;
     } catch (error) {
       console.error(`Failed to update user with ID ${id}:`, error);
 
@@ -88,7 +126,10 @@ export class UsersService {
         where: { id },
       });
 
-      return user;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password, ...userWithoutPassword } = user;
+
+      return userWithoutPassword;
     } catch (error) {
       console.error(`Failed to delete user with ID ${id}:`, error);
 

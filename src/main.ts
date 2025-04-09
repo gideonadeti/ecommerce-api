@@ -1,3 +1,4 @@
+import * as cookieParser from 'cookie-parser';
 import { NestFactory } from '@nestjs/core';
 import {
   SwaggerModule,
@@ -10,11 +11,16 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.use(cookieParser());
+
   const config = new DocumentBuilder()
     .setTitle('E-Commerce API')
     .setDescription('An API for an e-commerce platform')
     .setVersion('1.0.0')
     .addTag('users', 'User related endpoints')
+    .addTag('auth', 'Authentication related endpoints')
+    .addBearerAuth()
+    .addCookieAuth('refreshToken')
     .build();
 
   const options: SwaggerDocumentOptions = {
