@@ -1,10 +1,8 @@
 import * as bcrypt from 'bcryptjs';
-import { Prisma } from '@prisma/client';
 import {
   Injectable,
   InternalServerErrorException,
   NotFoundException,
-  ConflictException,
 } from '@nestjs/common';
 
 import { CreateUserDto } from './dto/create-user.dto';
@@ -25,16 +23,7 @@ export class UsersService {
 
       return user;
     } catch (error) {
-      console.error('Failed to create user:', error);
-
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
-        throw new ConflictException('Email is already in use.');
-      }
-
-      throw new InternalServerErrorException('Failed to create user.');
+      throw error;
     }
   }
 

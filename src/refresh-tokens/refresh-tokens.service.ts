@@ -1,5 +1,5 @@
 import * as bcrypt from 'bcryptjs';
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 
 import { CreateRefreshTokenDto } from './dto/create-refresh-token.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -17,9 +17,19 @@ export class RefreshTokensService {
         data: { ...createRefreshTokenDto, token: hashedToken },
       });
     } catch (error) {
-      console.error('Failed to create refresh token:', error);
+      throw error;
+    }
+  }
 
-      throw new InternalServerErrorException('Failed to create refresh token');
+  async findByUserId(userId: string) {
+    try {
+      const refreshToken = await this.prismaService.refreshToken.findUnique({
+        where: { userId },
+      });
+
+      return refreshToken;
+    } catch (error) {
+      throw error;
     }
   }
 
@@ -33,9 +43,7 @@ export class RefreshTokensService {
         data: { token: hashedToken },
       });
     } catch (error) {
-      console.error('Failed to update refresh token:', error);
-
-      throw new InternalServerErrorException('Failed to update refresh token');
+      throw error;
     }
   }
 
@@ -43,9 +51,7 @@ export class RefreshTokensService {
     try {
       await this.prismaService.refreshToken.delete({ where: { userId } });
     } catch (error) {
-      console.error('Failed to delete refresh token:', error);
-
-      throw new InternalServerErrorException('Failed to delete refresh token');
+      throw error;
     }
   }
 }

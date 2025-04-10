@@ -29,7 +29,7 @@ export class AuthController {
   @UseGuards(RefreshTokenGuard)
   @Post('refresh')
   async refresh(@Req() req: Request, @Res() res: Response) {
-    return this.authService.refresh(req.user, res);
+    return this.authService.refresh(req, res);
   }
 
   @ApiBearerAuth()
