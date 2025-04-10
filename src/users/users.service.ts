@@ -69,11 +69,9 @@ export class UsersService {
 
   async findByEmail(email: string) {
     try {
-      const user = await this.prismaService.user.findUnique({
+      return await this.prismaService.user.findUnique({
         where: { email },
       });
-
-      return user;
     } catch (error) {
       throw error;
     }

@@ -28,11 +28,9 @@ export class ProductsService {
       const roundedPrice = new Prisma.Decimal(createProductDto.price).toFixed(
         2,
       );
-      const product = await this.prismaService.product.create({
+      return await this.prismaService.product.create({
         data: { ...createProductDto, price: roundedPrice },
       });
-
-      return product;
     } catch (error) {
       this.handleError(error, 'Failed to create product.');
     }
@@ -40,9 +38,7 @@ export class ProductsService {
 
   async findAll() {
     try {
-      const products = await this.prismaService.product.findMany();
-
-      return products;
+      return await this.prismaService.product.findMany();
     } catch (error) {
       this.handleError(error, 'Failed to fetch products');
     }
@@ -66,12 +62,10 @@ export class ProductsService {
 
   async update(id: string, updateProductDto: UpdateProductDto) {
     try {
-      const product = await this.prismaService.product.update({
+      return await this.prismaService.product.update({
         where: { id },
         data: updateProductDto,
       });
-
-      return product;
     } catch (error) {
       this.handleError(error, `Failed to update product with ID ${id}`);
     }
@@ -79,11 +73,9 @@ export class ProductsService {
 
   async remove(id: string) {
     try {
-      const product = await this.prismaService.product.delete({
+      return await this.prismaService.product.delete({
         where: { id },
       });
-
-      return product;
     } catch (error) {
       this.handleError(error, `Failed to delete product with ID ${id}`);
     }

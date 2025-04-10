@@ -23,11 +23,9 @@ export class RefreshTokensService {
 
   async findByUserId(userId: string) {
     try {
-      const refreshToken = await this.prismaService.refreshToken.findUnique({
+      return await this.prismaService.refreshToken.findUnique({
         where: { userId },
       });
-
-      return refreshToken;
     } catch (error) {
       throw error;
     }
