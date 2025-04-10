@@ -30,14 +30,14 @@ export class UsersService {
     return userWithoutPassword;
   }
 
-  private handleError(error: any, message: string) {
-    console.error(message, error);
+  private handleError(error: any, action: string) {
+    console.error(`Failed to ${action}`, error);
 
     if (error instanceof NotFoundException) {
       throw error;
     }
 
-    throw new InternalServerErrorException(message);
+    throw new InternalServerErrorException(`Failed to ${action}`);
   }
 
   async create(createUserDto: CreateUserDto) {
@@ -58,12 +58,12 @@ export class UsersService {
       const user = await this.prismaService.user.findUnique({ where: { id } });
 
       if (!user) {
-        throw new NotFoundException(`User with ID ${id} not found.`);
+        throw new NotFoundException(`User with ID ${id} not found`);
       }
 
       return this.excludePassword(user);
     } catch (error) {
-      this.handleError(error, `Failed to fetch user with ID ${id}.`);
+      this.handleError(error, `fetch user with ID ${id}`);
     }
   }
 
@@ -92,7 +92,7 @@ export class UsersService {
 
       return this.excludePassword(user);
     } catch (error) {
-      this.handleError(error, `Failed to update user with ID ${id}.`);
+      this.handleError(error, `update user with ID ${id}`);
     }
   }
 
@@ -104,7 +104,7 @@ export class UsersService {
 
       return this.excludePassword(user);
     } catch (error) {
-      this.handleError(error, `Failed to delete user with ID ${id}.`);
+      this.handleError(error, `delete user with ID ${id}`);
     }
   }
 }

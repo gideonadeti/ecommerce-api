@@ -13,14 +13,14 @@ import { PrismaService } from 'src/prisma/prisma.service';
 export class ProductsService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  private handleError(error: any, message: string) {
-    console.error(message, error);
+  private handleError(error: any, action: string) {
+    console.error(`Failed to ${action}`, error);
 
     if (error instanceof NotFoundException) {
       throw error;
     }
 
-    throw new InternalServerErrorException(message);
+    throw new InternalServerErrorException(`Failed to ${action}`);
   }
 
   async create(createProductDto: CreateProductDto) {
@@ -32,7 +32,7 @@ export class ProductsService {
         data: { ...createProductDto, price: roundedPrice },
       });
     } catch (error) {
-      this.handleError(error, 'Failed to create product.');
+      this.handleError(error, 'create product');
     }
   }
 
@@ -40,7 +40,7 @@ export class ProductsService {
     try {
       return await this.prismaService.product.findMany();
     } catch (error) {
-      this.handleError(error, 'Failed to fetch products');
+      this.handleError(error, 'fetch products');
     }
   }
 
@@ -51,12 +51,12 @@ export class ProductsService {
       });
 
       if (!product) {
-        throw new NotFoundException(`Product with ID ${id} not found.`);
+        throw new NotFoundException(`Product with ID ${id} not found`);
       }
 
       return product;
     } catch (error) {
-      this.handleError(error, `Failed to fetch product with ID ${id}`);
+      this.handleError(error, `fetch product with ID ${id}`);
     }
   }
 
@@ -67,7 +67,7 @@ export class ProductsService {
         data: updateProductDto,
       });
     } catch (error) {
-      this.handleError(error, `Failed to update product with ID ${id}`);
+      this.handleError(error, `update product with ID ${id}`);
     }
   }
 
@@ -77,7 +77,7 @@ export class ProductsService {
         where: { id },
       });
     } catch (error) {
-      this.handleError(error, `Failed to delete product with ID ${id}`);
+      this.handleError(error, `delete product with ID ${id}`);
     }
   }
 }
