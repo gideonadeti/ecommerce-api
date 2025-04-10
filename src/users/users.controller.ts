@@ -2,7 +2,6 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   Controller,
   Get,
-  // Post,
   Body,
   Patch,
   Param,
