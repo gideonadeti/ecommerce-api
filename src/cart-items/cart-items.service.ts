@@ -16,7 +16,7 @@ export class CartItemsService {
   constructor(private readonly prismaService: PrismaService) {}
 
   private handleError(error: any, action: string) {
-    console.error(`Failed to ${action}`, error);
+    console.error(`Failed to ${action}:`, error);
 
     if (error instanceof NotFoundException) {
       throw error;
