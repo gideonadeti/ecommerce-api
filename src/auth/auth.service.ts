@@ -68,8 +68,8 @@ export class AuthService {
     }
   }
 
-  private handleAuthError(message: string, error: any) {
-    console.error(message, error);
+  private handleAuthError(action: string, error: any) {
+    console.error(`Failed to ${action}:`, error);
 
     if (error instanceof UnauthorizedException) {
       throw error;
@@ -80,7 +80,7 @@ export class AuthService {
       throw new ConflictException('Email is already in use.');
     }
 
-    throw new InternalServerErrorException(message);
+    throw new InternalServerErrorException(`Failed to ${action}`);
   }
 
   private createAuthPayload(user: Partial<User>) {
@@ -104,7 +104,7 @@ export class AuthService {
 
       await this.handleSuccessfulAuth(user, res, 201);
     } catch (error) {
-      this.handleAuthError('Failed to sign up user.', error);
+      this.handleAuthError('sign up user', error);
     }
   }
 
@@ -112,7 +112,7 @@ export class AuthService {
     try {
       await this.handleSuccessfulAuth(user, res);
     } catch (error) {
-      this.handleAuthError('Failed to sign in user.', error);
+      this.handleAuthError('sign in user', error);
     }
   }
 
@@ -143,7 +143,7 @@ export class AuthService {
 
       res.json({ accessToken });
     } catch (error) {
-      this.handleAuthError('Failed to refresh token', error);
+      this.handleAuthError('refresh token', error);
     }
   }
 
@@ -159,7 +159,7 @@ export class AuthService {
       });
       res.sendStatus(200);
     } catch (error) {
-      this.handleAuthError('Failed to sign out user.', error);
+      this.handleAuthError('sign out user', error);
     }
   }
 
