@@ -1,5 +1,6 @@
 import * as bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
+import { Prisma, User } from '@prisma/client';
 import { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -13,7 +14,20 @@ import { UsersService } from 'src/users/users.service';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
 import { jwtConstants } from './constants';
 import { RefreshTokensService } from 'src/refresh-tokens/refresh-tokens.service';
-import { Prisma } from '@prisma/client';
+
+interface AuthPayload {
+  email: string;
+  sub: string;
+  jti: string;
+}
+
+const REFRESH_COOKIE_CONFIG = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'strict' as const,
+  path: '/auth/refresh',
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+};
 
 @Injectable()
 export class AuthService {
@@ -23,49 +37,12 @@ export class AuthService {
     private refreshTokensService: RefreshTokensService,
   ) {}
 
-  async signUp(createUserDto: CreateUserDto, res: Response) {
-    try {
-      const user = await this.usersService.create(createUserDto);
-      const payload = { email: user.email, sub: user.id, jti: uuidv4() };
-      const accessToken = this.getAccessToken(payload);
-      const refreshToken = this.getRefreshToken(payload);
-
-      await this.refreshTokensService.create({
-        userId: user.id,
-        token: refreshToken,
-      });
-
-      res.cookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        path: '/auth/refresh',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-      });
-
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password, ...userWithoutPassword } = user;
-
-      res.status(201).json({
-        accessToken,
-        user: userWithoutPassword,
-      });
-    } catch (error) {
-      console.error('Failed to create user:', error);
-
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
-        throw new ConflictException('Email is already in use.');
-      }
-
-      throw new InternalServerErrorException('Failed to create user.');
-    }
-  }
-
-  async signIn(user: any, res: Response) {
-    const payload = { email: user.email, sub: user.id, jti: uuidv4() };
+  private async handleSuccessfulAuth(
+    user: Partial<User>,
+    res: Response,
+    statusCode: number = 200,
+  ) {
+    const payload = this.createAuthPayload(user);
     const accessToken = this.getAccessToken(payload);
     const refreshToken = this.getRefreshToken(payload);
 
@@ -74,7 +51,6 @@ export class AuthService {
         user.id,
       );
 
-      // If the user is already signed in, update their refresh token else create a new one
       if (existingRefreshToken) {
         await this.refreshTokensService.updateByUserId(user.id, refreshToken);
       } else {
@@ -84,27 +60,63 @@ export class AuthService {
         });
       }
 
-      res.cookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        path: '/auth/refresh',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-      });
-
-      res.json({
-        accessToken,
-        user,
-      });
+      res.cookie('refreshToken', refreshToken, REFRESH_COOKIE_CONFIG);
+      res.status(statusCode).json({ accessToken, user });
     } catch (error) {
-      console.error('Failed to sign in user:', error);
-
-      throw new InternalServerErrorException('Failed to sign in user.');
+      throw error;
     }
   }
 
-  async refresh(req: Request, res: Response) {
-    const user = req.user as any;
+  private handleAuthError(message: string, error: any) {
+    console.error(message, error);
+
+    if (error instanceof UnauthorizedException) {
+      throw error;
+    } else if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
+      throw new ConflictException('Email is already in use.');
+    }
+
+    throw new InternalServerErrorException(message);
+  }
+
+  private createAuthPayload(user: Partial<User>) {
+    return { email: user.email, sub: user.id, jti: uuidv4() };
+  }
+
+  private getAccessToken(payload: AuthPayload): string {
+    return this.jwtService.sign(payload);
+  }
+
+  private getRefreshToken(payload: AuthPayload): string {
+    return this.jwtService.sign(payload, {
+      secret: jwtConstants.refreshSecret,
+      expiresIn: '7d',
+    });
+  }
+
+  async signUp(createUserDto: CreateUserDto, res: Response): Promise<void> {
+    try {
+      const user = await this.usersService.create(createUserDto);
+
+      await this.handleSuccessfulAuth(user, res, 201);
+    } catch (error) {
+      this.handleAuthError('Failed to sign up user.', error);
+    }
+  }
+
+  async signIn(user: Partial<User>, res: Response): Promise<void> {
+    try {
+      await this.handleSuccessfulAuth(user, res);
+    } catch (error) {
+      this.handleAuthError('Failed to sign in user.', error);
+    }
+  }
+
+  async refresh(req: Request, res: Response): Promise<void> {
+    const user = req.user as Partial<User>;
     const refreshTokenFromCookie = req.cookies['refreshToken'];
 
     try {
@@ -125,38 +137,23 @@ export class AuthService {
         throw new UnauthorizedException('Invalid refresh token');
       }
 
-      const payload = { email: user.email, sub: user.id, jti: uuidv4() };
+      const payload = this.createAuthPayload(user);
       const accessToken = this.getAccessToken(payload);
 
-      res.json({
-        accessToken,
-      });
+      res.json({ accessToken });
     } catch (error) {
-      console.error('Failed to refresh token:', error);
-
-      if (error instanceof UnauthorizedException) {
-        throw error;
-      }
-
-      throw new InternalServerErrorException('Failed to refresh token');
+      this.handleAuthError('Failed to refresh token', error);
     }
   }
 
-  async signOut(user: any, res: Response) {
+  async signOut(user: Partial<User>, res: Response): Promise<void> {
     try {
       await this.refreshTokensService.removeByUserId(user.id);
 
-      res.clearCookie('refreshToken', {
-        path: '/auth/refresh',
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-      });
+      res.clearCookie('refreshToken', REFRESH_COOKIE_CONFIG);
       res.sendStatus(200);
     } catch (error) {
-      console.error('Failed to sign out user:', error);
-
-      throw new InternalServerErrorException('Failed to sign out user.');
+      this.handleAuthError('Failed to sign out user.', error);
     }
   }
 
@@ -166,26 +163,16 @@ export class AuthService {
 
       if (!user) return null;
 
-      const { password, ...result } = user;
-
-      const isCorrectPassword = await bcrypt.compare(pass, password);
+      const isCorrectPassword = await bcrypt.compare(pass, user.password);
 
       if (!isCorrectPassword) return null;
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password, ...result } = user;
 
       return result;
     } catch (error) {
       throw error;
     }
-  }
-
-  getAccessToken(payload: { sub: string; email: string; jti: string }) {
-    return this.jwtService.sign(payload);
-  }
-
-  getRefreshToken(payload: { sub: string; email: string; jti: string }) {
-    return this.jwtService.sign(payload, {
-      secret: jwtConstants.refreshSecret,
-      expiresIn: '7d',
-    });
   }
 }

@@ -13,29 +13,43 @@ import { PrismaService } from 'src/prisma/prisma.service';
 export class UsersService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async create(createUserDto: CreateUserDto) {
+  private async hashPassword(password: string): Promise<string> {
     try {
       const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(createUserDto.password, salt);
-      const user = await this.prismaService.user.create({
-        data: { ...createUserDto, password: hashedPassword },
-      });
 
-      return user;
+      return bcrypt.hash(password, salt);
     } catch (error) {
       throw error;
     }
   }
 
-  async findAll() {
+  private excludePassword<T extends { password: string }>(user: T) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...userWithoutPassword } = user;
+
+    return userWithoutPassword;
+  }
+
+  private handleError(error: any, message: string) {
+    console.error(message, error);
+
+    if (error instanceof NotFoundException) {
+      throw error;
+    }
+
+    throw new InternalServerErrorException(message);
+  }
+
+  async create(createUserDto: CreateUserDto) {
     try {
-      const users = await this.prismaService.user.findMany();
+      const hashedPassword = await this.hashPassword(createUserDto.password);
+      const user = await this.prismaService.user.create({
+        data: { ...createUserDto, password: hashedPassword },
+      });
 
-      return users;
+      return this.excludePassword(user);
     } catch (error) {
-      console.error('Failed to fetch users:', error);
-
-      throw new InternalServerErrorException('Failed to fetch users.');
+      throw error;
     }
   }
 
@@ -47,18 +61,9 @@ export class UsersService {
         throw new NotFoundException(`User with ID ${id} not found.`);
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password, ...userWithoutPassword } = user;
-
-      return userWithoutPassword;
+      return this.excludePassword(user);
     } catch (error) {
-      console.error(`Failed to fetch user with ID ${id}:`, error);
-
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-
-      throw new InternalServerErrorException('Failed to fetch user.');
+      this.handleError(error, `Failed to fetch user with ID ${id}.`);
     }
   }
 
@@ -68,29 +73,18 @@ export class UsersService {
         where: { email },
       });
 
-      if (!user) {
-        throw new NotFoundException(`User with email ${email} not found.`);
-      }
-
       return user;
     } catch (error) {
-      console.error(`Failed to fetch user with email ${email}:`, error);
-
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-
-      throw new InternalServerErrorException('Failed to fetch user.');
+      throw error;
     }
   }
 
   async update(id: string, updateUserDto: UpdateUserDto) {
     try {
       if (updateUserDto.password) {
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(updateUserDto.password, salt);
-
-        updateUserDto.password = hashedPassword;
+        updateUserDto.password = await this.hashPassword(
+          updateUserDto.password,
+        );
       }
 
       const user = await this.prismaService.user.update({
@@ -98,14 +92,9 @@ export class UsersService {
         data: updateUserDto,
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password, ...userWithoutPassword } = user;
-
-      return userWithoutPassword;
+      return this.excludePassword(user);
     } catch (error) {
-      console.error(`Failed to update user with ID ${id}:`, error);
-
-      throw new InternalServerErrorException('Failed to update user.');
+      this.handleError(error, `Failed to update user with ID ${id}.`);
     }
   }
 
@@ -115,14 +104,9 @@ export class UsersService {
         where: { id },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password, ...userWithoutPassword } = user;
-
-      return userWithoutPassword;
+      return this.excludePassword(user);
     } catch (error) {
-      console.error(`Failed to delete user with ID ${id}:`, error);
-
-      throw new InternalServerErrorException('Failed to delete user.');
+      this.handleError(error, `Failed to delete user with ID ${id}.`);
     }
   }
 }
