@@ -19,6 +19,7 @@ async function bootstrap() {
     .setVersion('1.0.0')
     .addTag('users', 'User related endpoints')
     .addTag('auth', 'Authentication related endpoints')
+    .addTag('products', 'Product related endpoints')
     .addBearerAuth()
     .build();
 

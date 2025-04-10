@@ -1,6 +1,6 @@
 import * as bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
-import { Prisma, User } from '@prisma/client';
+import { Prisma, Role, User } from '@prisma/client';
 import { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -18,6 +18,7 @@ import { RefreshTokensService } from 'src/refresh-tokens/refresh-tokens.service'
 interface AuthPayload {
   email: string;
   sub: string;
+  role: Role;
   jti: string;
 }
 
@@ -83,7 +84,7 @@ export class AuthService {
   }
 
   private createAuthPayload(user: Partial<User>) {
-    return { email: user.email, sub: user.id, jti: uuidv4() };
+    return { email: user.email, sub: user.id, role: user.role, jti: uuidv4() };
   }
 
   private getAccessToken(payload: AuthPayload): string {
@@ -150,7 +151,12 @@ export class AuthService {
     try {
       await this.refreshTokensService.removeByUserId(user.id);
 
-      res.clearCookie('refreshToken', REFRESH_COOKIE_CONFIG);
+      res.clearCookie('refreshToken', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict' as const,
+        path: '/auth/refresh',
+      });
       res.sendStatus(200);
     } catch (error) {
       this.handleAuthError('Failed to sign out user.', error);
