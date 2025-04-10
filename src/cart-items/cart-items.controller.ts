@@ -8,14 +8,13 @@ import {
   Param,
   Delete,
   UseGuards,
-  Req,
 } from '@nestjs/common';
 
 import { CartItemsService } from './cart-items.service';
 import { CreateCartItemDto } from './dto/create-cart-item.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
-import { Request } from 'express';
+import { UserId } from 'src/user-id/user-id.decorator';
 
 @ApiTags('cart-items')
 @ApiBearerAuth()
@@ -26,18 +25,18 @@ export class CartItemsController {
 
   @Post()
   create(
-    @Req() req: Request & { user: { id: string } },
+    @UserId() userId: string,
     @Body() createCartItemDto: CreateCartItemDto,
   ) {
     return this.cartItemsService.create({
       ...createCartItemDto,
-      userId: req.user.id,
+      userId,
     });
   }
 
   @Get()
-  findAll(@Req() req: Request & { user: { id: string } }) {
-    return this.cartItemsService.findAll(req.user.id);
+  findAll(@UserId() userId: string) {
+    return this.cartItemsService.findAll(userId);
   }
 
   @Get(':id')
@@ -47,13 +46,13 @@ export class CartItemsController {
 
   @Patch(':id')
   update(
-    @Req() req: Request & { user: { id: string } },
+    @UserId() userId: string,
     @Param('id') id: string,
     @Body() updateCartItemDto: UpdateCartItemDto,
   ) {
     return this.cartItemsService.update(id, {
       ...updateCartItemDto,
-      userId: req.user.id,
+      userId,
     });
   }
 
