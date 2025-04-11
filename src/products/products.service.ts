@@ -30,11 +30,11 @@ export class ProductsService {
 
   async create(createProductDto: CreateProductDto) {
     try {
-      const roundedPrice = new Prisma.Decimal(createProductDto.price).toFixed(
-        2,
-      );
       return await this.prismaService.product.create({
-        data: { ...createProductDto, price: roundedPrice },
+        data: {
+          ...createProductDto,
+          price: this.roundPrice(createProductDto.price),
+        },
       });
     } catch (error) {
       this.handleError(error, 'create product');
