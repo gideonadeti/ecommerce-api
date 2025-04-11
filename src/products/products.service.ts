@@ -8,7 +8,7 @@ import {
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { SearchProductDto } from './dto/search-product.dto';
+import { FindAllProductsDto } from './dto/find-all-products.dto';
 
 @Injectable()
 export class ProductsService {
@@ -41,39 +41,71 @@ export class ProductsService {
     }
   }
 
-  async findAll() {
+  async findAll(query: FindAllProductsDto) {
     try {
-      return await this.prismaService.product.findMany();
-    } catch (error) {
-      this.handleError(error, 'fetch products');
-    }
-  }
+      const {
+        name,
+        minPrice,
+        maxPrice,
+        sortBy = 'createdAt',
+        order = 'desc',
+        limit,
+        page,
+      } = query;
 
-  async search(query: SearchProductDto) {
-    try {
       const whereConditions: any = {};
 
-      if (query.name) {
-        whereConditions.name = {
-          contains: query.name,
-          mode: 'insensitive',
-        };
+      if (name) {
+        whereConditions.name = { contains: name, mode: 'insensitive' };
       }
 
-      if (query.minPrice || query.maxPrice) {
+      if (minPrice !== undefined || maxPrice !== undefined) {
         whereConditions.price = {};
 
-        if (query.minPrice)
-          whereConditions.price.gte = this.roundPrice(query.minPrice);
-        if (query.maxPrice)
-          whereConditions.price.lte = this.roundPrice(query.maxPrice);
+        if (minPrice !== undefined) {
+          whereConditions.price.gte = this.roundPrice(minPrice);
+        }
+        if (maxPrice !== undefined) {
+          whereConditions.price.lte = this.roundPrice(maxPrice);
+        }
       }
 
-      return await this.prismaService.product.findMany({
+      if (!page && !limit) {
+        return await this.prismaService.product.findMany({
+          where: whereConditions,
+          orderBy: {
+            [sortBy]: order,
+          },
+        });
+      }
+
+      const numberPage = page ? Number(page) : 1;
+      const numberLimit = limit ? Number(limit) : 10;
+      const total = await this.prismaService.product.count({
         where: whereConditions,
       });
+      const lastPage = Math.ceil(total / numberLimit);
+      const products = await this.prismaService.product.findMany({
+        where: whereConditions,
+        orderBy: {
+          [sortBy]: order,
+        },
+        skip: (numberPage - 1) * numberLimit,
+        take: numberLimit,
+      });
+
+      return {
+        products,
+        meta: {
+          total,
+          page: numberPage,
+          lastPage,
+          hasNextPage: numberPage < lastPage,
+          hasPreviousPage: numberPage > 1,
+        },
+      };
     } catch (error) {
-      this.handleError(error, 'search products');
+      this.handleError(error, 'fetch products');
     }
   }
 
