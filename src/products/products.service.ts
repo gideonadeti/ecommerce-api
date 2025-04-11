@@ -8,6 +8,7 @@ import {
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { SearchProductDto } from './dto/search-product.dto';
 
 @Injectable()
 export class ProductsService {
@@ -21,6 +22,10 @@ export class ProductsService {
     }
 
     throw new InternalServerErrorException(`Failed to ${action}`);
+  }
+
+  private roundPrice(price: number) {
+    return new Prisma.Decimal(price).toFixed(2);
   }
 
   async create(createProductDto: CreateProductDto) {
@@ -41,6 +46,34 @@ export class ProductsService {
       return await this.prismaService.product.findMany();
     } catch (error) {
       this.handleError(error, 'fetch products');
+    }
+  }
+
+  async search(query: SearchProductDto) {
+    try {
+      const whereConditions: any = {};
+
+      if (query.name) {
+        whereConditions.name = {
+          contains: query.name,
+          mode: 'insensitive',
+        };
+      }
+
+      if (query.minPrice || query.maxPrice) {
+        whereConditions.price = {};
+
+        if (query.minPrice)
+          whereConditions.price.gte = this.roundPrice(query.minPrice);
+        if (query.maxPrice)
+          whereConditions.price.lte = this.roundPrice(query.maxPrice);
+      }
+
+      return await this.prismaService.product.findMany({
+        where: whereConditions,
+      });
+    } catch (error) {
+      this.handleError(error, 'search products');
     }
   }
 

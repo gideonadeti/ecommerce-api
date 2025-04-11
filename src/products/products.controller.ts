@@ -9,6 +9,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 
 import { ProductsService } from './products.service';
@@ -17,6 +18,7 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { Roles } from 'src/roles/roles.decorator';
 import { RolesGuard } from 'src/roles/roles.guard';
+import { SearchProductDto } from './dto/search-product.dto';
 
 @ApiTags('products')
 @ApiBearerAuth()
@@ -34,6 +36,11 @@ export class ProductsController {
   @Get()
   findAll() {
     return this.productsService.findAll();
+  }
+
+  @Get('search')
+  search(@Query() query: SearchProductDto) {
+    return this.productsService.search(query);
   }
 
   @Get(':id')
