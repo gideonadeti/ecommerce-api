@@ -1,5 +1,6 @@
 import { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
+import { ApiTags } from '@nestjs/swagger';
 import {
   Controller,
   Headers,
@@ -11,6 +12,7 @@ import {
 
 import { StripeService } from 'src/stripe/stripe.service';
 
+@ApiTags('webhooks')
 @Controller('webhooks')
 export class WebhooksController {
   constructor(

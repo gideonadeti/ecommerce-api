@@ -23,6 +23,9 @@ async function bootstrap() {
     .addTag('auth', 'Authentication related endpoints')
     .addTag('products', 'Product related endpoints')
     .addTag('cart-items', 'Cart item related endpoints')
+    .addTag('checkout', 'Endpoints for checkout')
+    .addTag('webhooks', 'Webhook related endpoints')
+    .addTag('orders', 'Order related endpoints')
     .addBearerAuth()
     .build();
 

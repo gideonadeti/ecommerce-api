@@ -1,10 +1,11 @@
 import { Controller, Post, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 import { StripeService } from 'src/stripe/stripe.service';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { UserId } from 'src/user-id/user-id.decorator';
 
+@ApiTags('checkout')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('checkout')
