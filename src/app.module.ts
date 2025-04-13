@@ -4,6 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { StripeModule } from './stripe/stripe.module';
+import { OrdersModule } from './orders/orders.module';
 import { RefreshTokensModule } from './refresh-tokens/refresh-tokens.module';
 import { ProductsModule } from './products/products.module';
 import { CartItemsModule } from './cart-items/cart-items.module';
@@ -22,6 +23,7 @@ import { WebhooksController } from './webhooks/webhooks.controller';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    OrdersModule,
   ],
   controllers: [CheckoutController, WebhooksController],
   providers: [PrismaService],

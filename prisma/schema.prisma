@@ -24,6 +24,7 @@ model User {
   role          Role           @default(CUSTOMER)
   refreshTokens RefreshToken[]
   cartItems     CartItem[]
+  orders        Order[]
 }
 
 model RefreshToken {
@@ -44,7 +45,8 @@ model Product {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  cartItems CartItem[]
+  cartItems  CartItem[]
+  orderItems OrderItem[]
 }
 
 model CartItem {
@@ -59,4 +61,34 @@ model CartItem {
   user    User    @relation(fields: [userId], references: [id])
 
   @@unique([userId, productId])
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  productId String
+  quantity  Int
+  price     Decimal
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+}
+
+enum OrderStatus {
+  DELIVERING
+  DELIVERED
+}
+
+model Order {
+  id        String   @id @default(cuid())
+  userId    String
+  total     Decimal
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user       User        @relation(fields: [userId], references: [id])
+  status     OrderStatus @default(DELIVERING)
+  orderItems OrderItem[]
 }
