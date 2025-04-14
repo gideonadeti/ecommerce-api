@@ -32,8 +32,7 @@ export class StripeService {
   async createCheckoutSession(userId: string) {
     try {
       const cartItems = await this.cartItemsService.findAll(userId);
-      const frontendBaseUrl =
-        this.configService.get<string>('FRONTEND_BASE_URL');
+      const backendBaseUrl = this.configService.get<string>('BACKEND_BASE_URL');
 
       if (cartItems.length === 0) {
         throw new BadRequestException(
@@ -56,8 +55,8 @@ export class StripeService {
         metadata: {
           userId,
         },
-        success_url: `${frontendBaseUrl}/checkout?success=true`,
-        cancel_url: `${frontendBaseUrl}/checkout?canceled=true`,
+        success_url: `${backendBaseUrl}/checkout?success=true`,
+        cancel_url: `${backendBaseUrl}/checkout?canceled=true`,
       });
 
       return {
